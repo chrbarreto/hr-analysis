@@ -42,6 +42,7 @@ dataset_after_relief <- HR[, c(top_features)]
 
 ##### 4. Classificador SVM #####
 
+library(e1071)
 # Função para iterar os folds e calcular as medidas de acurácia
 iterate_folds_svm <- function(dataset, k, cost_input, kernel_type){
   # inicializa algumas variáveis
@@ -188,3 +189,73 @@ values <- iterate_folds_nn(HR, k, c, kernel)
 # TODO: completar o restante de NN, tem como fazer generico ou vamos ter que repetir a funcao iterate folds?
 
 
+##### 6. Classificador naive bayes ######
+library(e1071)
+# função iterate_folds modificada para naive bayes
+iterate_folds_bayes <- function(dataset, k){
+  # inicializa algumas variáveis
+  precisionSum <- 0
+  recallSum <- 0
+  errorSum <- 0
+  # quebra o dataset em k folds
+  folds <- cut(seq(1,nrow(dataset)), breaks=k,labels=FALSE)
+  for(i in 1:k){
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    # separa 1 fold pra test e k-1 para treinamento 
+    testData <- dataset[testIndexes, ]
+    trainData <- dataset[-testIndexes, ]
+    
+    # --------------------------------------------
+    # Aplica-se SVM/Redes Neurais/Naive Bayes aqui
+    fit <- naiveBayes(left ~., data = dataset)
+    print(fit)
+    prediction <- predict(fit, testData)
+    # --------------------------------------------
+    
+    # matriz de confusão
+    tab <- table(prediction, testData$left)
+    print(tab)
+    TP <- tab[c(2), c(2)]
+    FP <- tab[c(2), c(1)]
+    FN <- tab[c(1), c(2)]
+    TN <- tab[c(1), c(1)]
+    P <- TP + FN
+    # cálculo de erro, precisão e recall
+    error <- (FN + FP) / (TP + FP + FN + TN)
+    precision <- TP/(TP + FP)
+    recall <- TP/(P)
+    
+    # exibe os valores no console
+    print(paste("Erro: ", error))
+    print(paste("Sensibilidade: ", recall))
+    print(paste("Precisão: ", precision))
+    
+    # acrescenta-se aos valores totais
+    precisionSum <- precisionSum + precision
+    recallSum <- recallSum + recall
+    errorSum <- errorSum + error
+  }
+  return(list(precisionSum/k, recallSum/k, errorSum/k))
+}
+
+# define o uso de 10 folds 
+k <- 10
+
+# Executa o naive bayes com TODAS as características,  calcula e exibe erro, precisão, e recall médios 
+values <- iterate_folds_bayes(HR, k)
+# calcula e exibe erro, precisão, e recall médios
+print(paste("Erro médio: ", values[3]))
+print(paste("Sensibilidade média: ", values[2]))
+print(paste("Precisão média: ", values[1]))
+
+# Executa o naive bayes com características selecionadas pelo RELIEF,  calcula e exibe erro, precisão, e recall médios 
+values <- iterate_folds_bayes(dataset_after_relief, k)
+print(paste("Erro médio: ", values[3]))
+print(paste("Sensibilidade média: ", values[2]))
+print(paste("Precisão média: ", values[1]))
+
+# Executa o naive bayes com componentes selecionados usando PCA,  calcula e exibe erro, precisão, e recall médios 
+values <- iterate_folds_bayes(dataset_after_pca, k)
+print(paste("Erro médio: ", values[3]))
+print(paste("Sensibilidade média: ", values[2]))
+print(paste("Precisão média: ", values[1]))
