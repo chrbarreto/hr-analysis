@@ -132,11 +132,16 @@ print(paste("Precisão média: ", values[1]))
 ##### 5. Classificador Redes Neurais #####
 
 # função iterate_folds modificada para NN
-iterate_folds <- function(dataset, k, num_neurons_input, learn_input){
+iterate_folds_nn <- function(dataset, k, num_neurons_input, learn_input, index_class){
   # inicializa algumas variáveis
   precisionSum <- 0
   recallSum <- 0
   errorSum <- 0
+  
+  # Gera a fórmula que contém todas as características contra a classe ("left")
+  n <- colnames(dataset)
+  form <- as.formula(paste("left ~", paste(n[!n %in% "left"], collapse = " + ")))
+
   # quebra o dataset em k folds
   folds <- cut(seq(1,nrow(dataset)), breaks=k,labels=FALSE)
   for(i in 1:k){
@@ -146,23 +151,15 @@ iterate_folds <- function(dataset, k, num_neurons_input, learn_input){
     trainData <- dataset[-testIndexes, ]
     
     # Aplica-se neuralnet para todas as características
-    # A fórmula deve ser alterada de acordo com a quantidade de características inputadas
-    fit <- neuralnet(left ~ satisfaction_level + last_evaluation + number_project + 
-                        average_montly_hours + time_spend_company + Work_accident +
-                        promotion_last_5years + departmentaccounting + departmenthr + 
-                        departmentIT + departmentmanagement + departmentmarketing + 
-                        departmentproduct_mng + departmentRandD + departmentsales + 
-                        departmentsupport + departmenttechnical + salaryhigh + salarylow + salarymedium,
-                      data = trainData, hidden=num_neurons_input, learningrate = learn_input, err.fct ="ce",
-                      linear.output = FALSE, stepmax=1e6)
-    
+    fit <- neuralnet(form, data = trainData, hidden=num_neurons_input, learningrate = learn_input,
+                     err.fct ="ce", linear.output = FALSE, stepmax=1e6)
     # Aplica o modelo obtido sobre a base de teste
-    output <- compute(fit, testData[, -21])
+    output <- compute(fit, testData[, -(index_class)])
     p <- output$net.result
     prediction <- ifelse(p>0.5, 1, 0)
     
     # matriz de confusão
-    tab <- table(prediction, testData$left)
+    tab <- table(prediction, testData[, index_class])
     print(tab)
     TP <- ifelse(dim(tab)[1] == 1, 0, tab[c(2), c(2)])  # true positive
     FP <- ifelse(dim(tab)[1] == 1, 0, tab[c(2), c(1)]) # false positive
@@ -208,19 +205,22 @@ num_neurons_input <- 1 # número de neurônios, variamos de 1 a 4 neurônios
 learn_input <- 0.1 # learning rate. Utilizamos os seguintes valores: 0.1, 0.5 e 1
 
 # Executa o NN com TODAS as características,  calcula e exibe erro, precisão, e recall médios 
-values <- iterate_folds(HR_dummy, k, num_neurons_input, learn_input)
+index_class <- 21 # a classe left está na posição 21 neste caso
+values <- iterate_folds_nn(HR_dummy, k, num_neurons_input, learn_input, index_class)
 print(paste("Erro médio: ", values[3]))
 print(paste("Sensibilidade média: ", values[2]))
 print(paste("Precisão média: ", values[1]))
 
 # Executa o NN com as características do RELIEF, calcula e exibe erro, precisão, e recall médios 
-values <- iterate_folds(dataset_after_relief, k, num_neurons_input, learn_input)
+index_class <- 6 # a classe left está na posição 6 neste caso
+values <- iterate_folds_nn(dataset_after_relief, k, num_neurons_input, learn_input, index_class)
 print(paste("Erro médio: ", values[3]))
 print(paste("Sensibilidade média: ", values[2]))
 print(paste("Precisão média: ", values[1]))
 
 # Executa o NN com os componentes do PCA, calcula e exibe erro, precisão, e recall médios 
-values <- iterate_folds(dataset_after_pca, k, num_neurons_input, learn_input)
+index_class <- 7 # a classe left está na posição 7 neste caso
+values <- iterate_folds_nn(dataset_after_pca, k, num_neurons_input, learn_input, index_class)
 print(paste("Erro médio: ", values[3]))
 print(paste("Sensibilidade média: ", values[2]))
 print(paste("Precisão média: ", values[1]))
