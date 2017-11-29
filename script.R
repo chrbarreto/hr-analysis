@@ -107,35 +107,24 @@ iterate_folds_svm <- function(dataset, k, cost_input, kernel_type){
     errorSum <- errorSum + error
   }
   # returns an average of the values obtained in all k iterations
-  return(list(precisionSum/k, recallSum/k, errorSum/k))
+  values <- list(errorSum/k, recallSum/k, precisionSum/k)
+  print(paste("Average error: ", values[1]))
+  print(paste("Average recall: ", values[2]))
+  print(paste("Average precision: ", values[3]))
 }
 
 # parameters to be varied in SVM
-k <- 5 # number of folds
-c <- 1 # error cost (Options: 0.1, 0.5, 1)
-kernel <- "radial" # (Options: sigmoid, polynomial, radial, linear)
-
-# runs SVM for dataset with ALL variables
-# calculates and shows average error, precision, recall 
-values <- iterate_folds_svm(HR, k, c, kernel)
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
-
-# runs SVM for dataset with only variables selected by RELIEF
-# calculates and shows average error, precision, recall 
-values <- iterate_folds_svm(dataset_after_relief, k, c, kernel)
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
-
-# runs SVM for dataset with PCA components
-# calculates and shows average error, precision, recall 
-values <- iterate_folds_svm(dataset_after_pca, k, c, kernel)
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
-
+k <- 5
+dataset_list <- list(HR, dataset_after_relief, dataset_after_pca)
+kernel_list <- c("linear", "radial", "sigmoid", "polynomial")
+c_list <- c(0.1, 0.5, 1)
+for (dataset in dataset_list){
+  for (kernel in kernel_list){
+    for (c in c_list){
+      iterate_folds_svm(dataset, k, c, kernel)
+    }
+  }
+}
 ##### 5. Neural Networks #####
 
 # function for iterating over folds and estimating accuracy measures
@@ -190,7 +179,10 @@ iterate_folds_nn <- function(dataset, k, num_neurons_input, learn_input, index_c
     errorSum <- errorSum + error
   }
   # returns an average of the values obtained in all k iterations
-  return(list(precisionSum/k, recallSum/k, errorSum/k))
+  values <- list(errorSum/k, recallSum/k, precisionSum/k)
+  print(paste("Average error: ", values[1]))
+  print(paste("Average recall: ", values[2]))
+  print(paste("Average precision: ", values[3]))
 }
 
 # imports packages for dealing with neural networks and dummy variables
@@ -212,30 +204,19 @@ num_neurons_input <- 1 # number of neurons in hidden layer (Options: 1, 2, 3, 4,
 learn_input <- 0.1 # learning rate (Options: 0.1, 0.5, 1)
 
 # runs Neural Network for dataset with ALL variables
-# calculates and shows average error, precision, recall 
+# and prints average error, recall and precision
 index_class <- 21 # index for "left" class
-values <- iterate_folds_nn(HR_dummy, k, num_neurons_input, learn_input, index_class)
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
+iterate_folds_nn(HR_dummy, k, num_neurons_input, learn_input, index_class)
 
 # runs SVM for dataset with only variables selected by RELIEF
-# calculates and shows average error, precision, recall 
+# and prints average error, recall and precision
 index_class <- 6 
-values <- iterate_folds_nn(dataset_after_relief, k, num_neurons_input,
-                           learn_input, index_class)
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
+iterate_folds_nn(dataset_after_relief, k, num_neurons_input, learn_input, index_class)
 
 # runs Neural Network with PCA components
-# calculates and shows average error, precision, recall 
+# and prints average error, recall and precision
 index_class <- 7
-values <- iterate_folds_nn(dataset_after_pca, k, num_neurons_input,
-                           learn_input, index_class)
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
+iterate_folds_nn(dataset_after_pca, k, num_neurons_input, learn_input, index_class)
 
 
 ##### 6. Naive Bayes ######
@@ -281,28 +262,17 @@ iterate_folds_bayes <- function(dataset, k){
     errorSum <- errorSum + error
   }
   # returns an average of the values obtained in all k iterations
-  return(list(precisionSum/k, recallSum/k, errorSum/k))
+  values <- list(errorSum/k, recallSum/k, precisionSum/k)
+  print(paste("Average error: ", values[1]))
+  print(paste("Average recall: ", values[2]))
+  print(paste("Average precision: ", values[3]))
 }
 
+# Naive Bayes is faster than SVM and NN, so we can work with 10 folds
 k <- 10
+# No change of parametes was made
+dataset_list <- list(HR, dataset_after_relief, dataset_after_pca)
+for (dataset in dataset_list){
+      iterate_folds_bayes(dataset, k)
+}
 
-# runs Naive Bayes for dataset with ALL variables
-values <- iterate_folds_bayes(HR, k)
-# calculates and shows average error, precision, recall 
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
-
-# runs Naive Bayes for dataset with only variables selected by RELIEF
-values <- iterate_folds_bayes(dataset_after_relief, k)
-# calculates and shows average error, precision, recall 
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
-
-# runs Naive Bayes for dataset with PCA components
-values <- iterate_folds_bayes(dataset_after_pca, k)
-# calculates and shows average error, precision, recall 
-print(paste("Average error: ", values[3]))
-print(paste("Average recall: ", values[2]))
-print(paste("Average precision: ", values[1]))
