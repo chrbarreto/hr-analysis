@@ -59,7 +59,8 @@ dataset_after_relief <- HR[, c("satisfaction_level", "last_evaluation",
 # showing dataset which includes only variables selected by RELIEF
 View(dataset_after_relief)
 
-########## 4. Applying SVM ##########
+
+########## 4. SVM ##########
 
 library(e1071)
 # function for iterating over folds and estimating accuracy measures
@@ -112,19 +113,58 @@ iterate_folds_svm <- function(dataset, k, cost_input, kernel_type){
   print(paste("Average precision: ", values[3]))
 }
 
-# parameters to be assorted in SVM
-k <- 5
-dataset_list <- list(HR, dataset_after_relief, dataset_after_pca) # list of datasets
-kernel_list <- c("linear", "radial", "sigmoid", "polynomial") # list of kernels 
-c_list <- c(0.1, 0.5, 1) # list of possible error_cost values
-for (dataset in dataset_list){
-  for (kernel in kernel_list){
-    for (c in c_list){
-      iterate_folds_svm(dataset, k, c, kernel)
-    }
+########## 5. Naive Bayes ##########
+
+library(e1071)
+# function for iterating over folds and estimating accuracy measures
+iterate_folds_bayes <- function(dataset, k){
+  precisionSum <- 0
+  recallSum <- 0
+  errorSum <- 0
+  # partitioning input dataset into k folds
+  folds <- cut(seq(1,nrow(dataset)), breaks=k,labels=FALSE)
+  for(i in 1:k){
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    # selecting 1 fold for testing and k-1 for training
+    testData <- dataset[testIndexes, ]
+    trainData <- dataset[-testIndexes, ]
+    
+    # applying model to training subset
+    fit <- naiveBayes(left ~., data = dataset)
+    prediction <- predict(fit, testData)
+    
+    # confusion matrix
+    tab <- table(prediction, testData$left)
+    print(tab)
+    TP <- ifelse(dim(tab)[1] == 1, 0, tab[c(2), c(2)])  # true positive
+    FP <- ifelse(dim(tab)[1] == 1, 0, tab[c(2), c(1)]) # false positive
+    FN <- tab[c(1), c(2)]  # false negative
+    TN <- tab[c(1), c(1)]  # true negative
+    P <- TP + FN
+    # calculating error, recall and precision for each fold
+    error <- (FN + FP) / (TP + FP + FN + TN)
+    precision <- TP/(TP + FP)
+    recall <- TP/(P)
+    
+    # showing results in console
+    print(paste("Error: ", error))
+    print(paste("Recall: ", recall))
+    print(paste("Precision: ", precision))
+    
+    # adding calculated values to final results
+    precisionSum <- precisionSum + precision
+    recallSum <- recallSum + recall
+    errorSum <- errorSum + error
   }
+  # returning an average of the values obtained in all k iterations
+  values <- list(errorSum/k, recallSum/k, precisionSum/k)
+  print(paste("Average error: ", values[1]))
+  print(paste("Average recall: ", values[2]))
+  print(paste("Average precision: ", values[3]))
 }
-########## 5. Applying Neural Networks ##########
+
+
+########## 6. Neural Networks ##########
 
 # function for iterating over folds and estimating accuracy measures
 iterate_folds_nn <- function(dataset, k, num_neurons_input, learn_input, index_class){
@@ -184,6 +224,35 @@ iterate_folds_nn <- function(dataset, k, num_neurons_input, learn_input, index_c
   print(paste("Average precision: ", values[3]))
 }
 
+
+
+########## 7. Running model functions ##########
+
+### SVM ###
+k <- 5
+dataset_list <- list(HR, dataset_after_relief, dataset_after_pca) # list of datasets
+kernel_list <- c("linear", "radial", "sigmoid", "polynomial") # list of kernels 
+c_list <- c(0.1, 0.5, 1) # list of possible error_cost values
+for (dataset in dataset_list){
+  for (kernel in kernel_list){
+    for (c in c_list){
+      iterate_folds_svm(dataset, k, c, kernel)
+    }
+  }
+}
+
+### Naive Bayes ###
+
+# Naive Bayes is faster than SVM and NN, so we can work with 10 folds
+# No change of parameters was made
+k <- 10
+dataset_list <- list(HR, dataset_after_relief, dataset_after_pca)
+for (dataset in dataset_list){
+  iterate_folds_bayes(dataset, k)
+}
+
+### Neural Networks ###
+
 # importing packages for dealing with neural networks and dummy variables
 library(neuralnet)
 library(dummies)
@@ -216,62 +285,3 @@ iterate_folds_nn(dataset_after_relief, k, num_neurons_input, learn_input, index_
 # and printing average error, recall and precision
 index_class <- 7
 iterate_folds_nn(dataset_after_pca, k, num_neurons_input, learn_input, index_class)
-
-
-########## 6. Applying Naive Bayes ##########
-
-library(e1071)
-# function for iterating over folds and estimating accuracy measures
-iterate_folds_bayes <- function(dataset, k){
-  precisionSum <- 0
-  recallSum <- 0
-  errorSum <- 0
-  # partitioning input dataset into k folds
-  folds <- cut(seq(1,nrow(dataset)), breaks=k,labels=FALSE)
-  for(i in 1:k){
-    testIndexes <- which(folds==i,arr.ind=TRUE)
-    # selecting 1 fold for testing and k-1 for training
-    testData <- dataset[testIndexes, ]
-    trainData <- dataset[-testIndexes, ]
-    
-    # applying model to training subset
-    fit <- naiveBayes(left ~., data = dataset)
-    prediction <- predict(fit, testData)
-    
-    # confusion matrix
-    tab <- table(prediction, testData$left)
-    print(tab)
-    TP <- ifelse(dim(tab)[1] == 1, 0, tab[c(2), c(2)])  # true positive
-    FP <- ifelse(dim(tab)[1] == 1, 0, tab[c(2), c(1)]) # false positive
-    FN <- tab[c(1), c(2)]  # false negative
-    TN <- tab[c(1), c(1)]  # true negative
-    P <- TP + FN
-    # calculating error, recall and precision for each fold
-    error <- (FN + FP) / (TP + FP + FN + TN)
-    precision <- TP/(TP + FP)
-    recall <- TP/(P)
-    
-    # showing results in console
-    print(paste("Error: ", error))
-    print(paste("Recall: ", recall))
-    print(paste("Precision: ", precision))
-    
-    # adding calculated values to final results
-    precisionSum <- precisionSum + precision
-    recallSum <- recallSum + recall
-    errorSum <- errorSum + error
-  }
-  # returning an average of the values obtained in all k iterations
-  values <- list(errorSum/k, recallSum/k, precisionSum/k)
-  print(paste("Average error: ", values[1]))
-  print(paste("Average recall: ", values[2]))
-  print(paste("Average precision: ", values[3]))
-}
-
-# Naive Bayes is faster than SVM and NN, so we can work with 10 folds
-# No change of parametes was made
-k <- 10
-dataset_list <- list(HR, dataset_after_relief, dataset_after_pca)
-for (dataset in dataset_list){
-      iterate_folds_bayes(dataset, k)
-}
