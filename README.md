@@ -1,5 +1,6 @@
-# HR Analysis
+# Classification Models for Human Resources Analytics
 This project contains a script responsible for implementing SVM, Neural Networks and Naïve Bayes with three different datasets: the original one, the one which contains only features selected by RELIEF algorithm and the one that has PCA components. For each run, the script prints average error, recall and precision for comparison. 
+P.S.:The original dataset was downloaded from kaggle at https://www.kaggle.com/ludobenistant/hr-analytics/downloads/human-resources-analytics.zip. 
 
 #### How to run
 
