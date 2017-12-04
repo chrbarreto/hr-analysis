@@ -1,15 +1,11 @@
-# address for downloading HR Analytics dataset
-# https://www.kaggle.com/ludobenistant/hr-analytics/downloads/human-resources-analytics.zip
 
 ########## 1. Reading and viewing dataset ########## 
 
 library(readr)
-HR <- read_csv("HR.csv")
+HR = read_csv('HR.csv', col_names= T)
 
 # shuffling dataset
 HR <- HR[sample(nrow(HR)),]
-View(HR)
-
 
 ########## 2. Applying PCA for merging components ##########
 
@@ -32,16 +28,8 @@ left <- HR[,c(7)]
 # merging dataset with class after PCA components calculation
 dataset_after_pca <- cbind(HR_pca, left)
 
-# showing resulting dataset 
-View(dataset_after_pca)
-
 ##### 3. Applying RELIEF for selecting features #####
 
-# If your application does not find FSelector package, 
-# dyn.load parameter must be changed according to your JDK location
-# dyn.load('/Library/Java/JavaVirtualMachines/jdk1.8.0_112.jdk/Contents/Home/jre/lib/server/libjvm.dylib')
-# and then package rJava must be specified
-# require(rJava)
 library(FSelector)
 
 # running RELIEF algorithm for estimating variables' weights
@@ -56,9 +44,6 @@ top_features <- cutoff.k(weights, 5)
 dataset_after_relief <- HR[, c("satisfaction_level", "last_evaluation", 
                                "number_project", "average_montly_hours", "time_spend_company", "left")]
 
-# showing dataset which includes only variables selected by RELIEF
-View(dataset_after_relief)
-
 
 ########## 4. SVM ##########
 
@@ -70,6 +55,7 @@ iterate_folds_svm <- function(dataset, k, cost_input, kernel_type){
   errorSum <- 0
   # partitioning input dataset into k folds
   folds <- cut(seq(1, nrow(dataset)), breaks=k,labels=FALSE)
+  print("Printing partial confusion matrixes...")
   for(i in 1:k){
     testIndexes <- which(folds==i,arr.ind=TRUE)
     # selecting 1 fold for testing and k-1 for training
@@ -96,11 +82,6 @@ iterate_folds_svm <- function(dataset, k, cost_input, kernel_type){
     precision <- TP/(TP + FP)
     recall <- TP/(P)
     
-    # showing results in console
-    print(paste("Error: ", error))
-    print(paste("Recall: ", recall))
-    print(paste("Precision: ", precision))
-    
     # adding calculated values to final results
     precisionSum <- precisionSum + precision
     recallSum <- recallSum + recall
@@ -108,9 +89,12 @@ iterate_folds_svm <- function(dataset, k, cost_input, kernel_type){
   }
   # returning an average of the values obtained in all k iterations
   values <- list(errorSum/k, recallSum/k, precisionSum/k)
-  print(paste("Average error: ", values[1]))
-  print(paste("Average recall: ", values[2]))
-  print(paste("Average precision: ", values[3]))
+  print(paste("Cost of error: ", cost_input))
+  print(paste("Kernel: ", kernel_type))
+  print(paste("... the average error is ", values[1]))
+  print(paste("... the average recall is ", values[2]))
+  print(paste("... the average precision is ", values[3]))
+  
 }
 
 ########## 5. Naive Bayes ##########
@@ -121,6 +105,7 @@ iterate_folds_bayes <- function(dataset, k){
   precisionSum <- 0
   recallSum <- 0
   errorSum <- 0
+  print("Printing partial confusion matrixes...")
   # partitioning input dataset into k folds
   folds <- cut(seq(1,nrow(dataset)), breaks=k,labels=FALSE)
   for(i in 1:k){
@@ -146,11 +131,6 @@ iterate_folds_bayes <- function(dataset, k){
     precision <- TP/(TP + FP)
     recall <- TP/(P)
     
-    # showing results in console
-    print(paste("Error: ", error))
-    print(paste("Recall: ", recall))
-    print(paste("Precision: ", precision))
-    
     # adding calculated values to final results
     precisionSum <- precisionSum + precision
     recallSum <- recallSum + recall
@@ -158,9 +138,10 @@ iterate_folds_bayes <- function(dataset, k){
   }
   # returning an average of the values obtained in all k iterations
   values <- list(errorSum/k, recallSum/k, precisionSum/k)
-  print(paste("Average error: ", values[1]))
-  print(paste("Average recall: ", values[2]))
-  print(paste("Average precision: ", values[3]))
+  print(paste("... the average error is ", values[1]))
+  print(paste("... the average recall is ", values[2]))
+  print(paste("... the average precision is ", values[3]))
+  
 }
 
 
@@ -175,7 +156,7 @@ iterate_folds_nn <- function(dataset, k, num_neurons_input, learn_input, index_c
   # generating a formula which contains all of the incoming variables to compare them against the "left" class
   n <- colnames(dataset)
   form <- as.formula(paste("left ~", paste(n[!n %in% "left"], collapse = " + ")))
-  
+  print("Printing partial confusion matrixes...")
   # partitioning input dataset into k folds
   folds <- cut(seq(1,nrow(dataset)), breaks=k,labels=FALSE)
   for(i in 1:k){
@@ -207,11 +188,6 @@ iterate_folds_nn <- function(dataset, k, num_neurons_input, learn_input, index_c
     precision <- TP/(TP + FP)
     recall <- TP/(P)
     
-    # showing results in console
-    print(paste("Error: ", error))
-    print(paste("Recall: ", recall))
-    print(paste("Precision: ", precision))
-    
     # adding calculated values to final results
     precisionSum <- precisionSum + precision
     recallSum <- recallSum + recall
@@ -219,20 +195,26 @@ iterate_folds_nn <- function(dataset, k, num_neurons_input, learn_input, index_c
   }
   # returning an average of the values obtained in all k iterations
   values <- list(errorSum/k, recallSum/k, precisionSum/k)
-  print(paste("Average error: ", values[1]))
-  print(paste("Average recall: ", values[2]))
-  print(paste("Average precision: ", values[3]))
+  print(paste("Number of neurons: ", num_neurons_input))
+  print(paste("Learning rate: ", learn_input))
+  print(paste("... the average error is ", values[1]))
+  print(paste("... the average recall is ", values[2]))
+  print(paste("... the average precision is ", values[3]))
 }
 
 
 
 ########## 7. Running model functions ##########
 
-### SVM ###
+# We chose to use 5 folds for all models
 k <- 5
+
+### SVM ###
+print("======= SVM =======")
+
 dataset_list <- list(HR, dataset_after_relief, dataset_after_pca) # list of datasets
-kernel_list <- c("linear", "radial", "sigmoid", "polynomial") # list of kernels 
-c_list <- c(0.1, 0.5, 1) # list of possible error_cost values
+kernel_list <- c("linear", "radial", "polynomial") # list of kernels 
+c_list <- c(0.2, 1) # list of some error_cost values
 for (dataset in dataset_list){
   for (kernel in kernel_list){
     for (c in c_list){
@@ -242,10 +224,8 @@ for (dataset in dataset_list){
 }
 
 ### Naive Bayes ###
-
-# Naive Bayes is faster than SVM and NN, so we can work with 10 folds
+print("======= NAIVE BAYES =======")
 # No change of parameters was made
-k <- 10
 dataset_list <- list(HR, dataset_after_relief, dataset_after_pca)
 for (dataset in dataset_list){
   iterate_folds_bayes(dataset, k)
@@ -267,21 +247,33 @@ HR_dummy <- cbind(HR_dummy, left)
 HR_dummy <- HR_dummy[sample(nrow(HR_dummy)),]
 
 # parameters to be varied in Neural Networks
-k <- 5 # number of folds
-num_neurons_input <- 1 # number of neurons in hidden layer (Options: 1, 2, 3, 4, and so on)
-learn_input <- 0.1 # learning rate (Options: 0.1, 0.5, 1)
+num_neurons_list <- c(1, 2, 3) # number of neurons in hidden layer (Options: 1, 2, 3, 4, and so on)
+learn_rate_list <- c(0.1, 0.5) # learning rate (Options: 0.1, 0.5, 1)
 
+print("======= NEURAL NETWORKS =======")
 # running Neural Network for dataset with ALL variables
 # and printing average error, recall and precision
 index_class <- 21 # index for "left" class
-iterate_folds_nn(HR_dummy, k, num_neurons_input, learn_input, index_class)
+for (num_neurons in num_neurons_list){
+  for (learn_rate in learn_rate_list){
+    iterate_folds_nn(HR_dummy, k, num_neurons, learn_rate , index_class)
+  }
+}
 
-# running SVM for dataset with only variables selected by RELIEF
+# running NN for dataset with only variables selected by RELIEF
 # and printing average error, recall and precision
 index_class <- 6 
-iterate_folds_nn(dataset_after_relief, k, num_neurons_input, learn_input, index_class)
+for (num_neurons in num_neurons_list){
+  for (learn_rate in learn_rate_list){
+    iterate_folds_nn(dataset_after_relief, k, num_neurons, learn_rate , index_class)
+  }
+}
 
 # running Neural Network with PCA components
 # and printing average error, recall and precision
 index_class <- 7
-iterate_folds_nn(dataset_after_pca, k, num_neurons_input, learn_input, index_class)
+for (num_neurons in num_neurons_list){
+  for (learn_rate in learn_rate_list){
+    iterate_folds_nn(dataset_after_pca, k, num_neurons, learn_rate, index_class)
+  }
+}
